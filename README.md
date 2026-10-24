@@ -1,8 +1,10 @@
 # GLM-5.3-Flash drafter
 
-Build and evaluate a DSpark-style speculative drafter for
-`zai-org/GLM-5.3-Flash`. The first milestone is a correct target-feature and
-rejection-recovery integration.
+Build and train our own DSpark-style speculative drafter for
+`zai-org/GLM-5.3-Flash` as a personal research project. The goal is to learn
+through reproducible experiments. Improvements and negative results both count
+as findings. Performance measurements guide experiments rather than determine
+whether custom training is justified.
 
 ## Start here
 
@@ -10,6 +12,8 @@ rejection-recovery integration.
   integration boundaries.
 - [Source manifest](UPSTREAMS.toml): exact upstream revisions and reading paths.
 - [Setup research](docs/research/repository-setup.md): rationale and source links.
+- [Prior-work salvage assessment](docs/research/glm5-salvage-assessment.md):
+  reusable Flash code, corrected results, and the complete old issue ledger.
 
 `upstream/deepspec` is the complete pinned algorithm checkout.
 `reference/glm-5.3-flash` holds model metadata and tokenizer assets.
@@ -63,7 +67,10 @@ for results and baseline adaptations.
 
 ## Current milestone
 
-Choose the serving backend and compute environment, then prove feature/logit
-alignment and correct continuation after speculative rejection. A tiny cache
-and one training step come before large-scale data generation. See the target
-contract for the acceptance criteria.
+Choose the first training recipe and make its data and feature conventions
+explicit. Build a small, understood cache, train a drafter, and save and reload
+its checkpoint. Use correctness tests to make the results interpretable.
+
+Compare against public drafters as useful reference points. Run controlled
+experiments to understand acceptance, speed, and design choices. See the
+[target contract](docs/target-contract.md) for the required technical checks.

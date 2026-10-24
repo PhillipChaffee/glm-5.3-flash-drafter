@@ -3,6 +3,8 @@
 Target exactly `zai-org/GLM-5.3-Flash` (`glm5_next`). Source revisions and
 reading paths live in `UPSTREAMS.toml`.
 
+Before planning work, read `README.md` for the project goal and current milestone.
+
 - Before changing target features, prompt formatting, logits, or cache behavior,
   read `docs/target-contract.md` and the referenced implementation paths.
 - For DSpark changes, start with the task's paths under
