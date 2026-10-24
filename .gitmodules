@@ -1,0 +1,3 @@
+[submodule "upstream/deepspec"]
+	path = upstream/deepspec
+	url = https://github.com/deepseek-ai/DeepSpec.git

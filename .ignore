@@ -1,0 +1,3 @@
+# Keep default agent searches on project-owned code; use rg --no-ignore for upstream inspection.
+reference/
+upstream/

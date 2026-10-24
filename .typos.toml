@@ -1,0 +1,11 @@
+# python/.typos.toml: the trimmed subset a python bootstrap can hit.
+# CPY001 is ruff's copyright rule family, not the word "copy"; it appears
+# in pyproject.toml's documented ignore list.
+[files]
+# Copied upstream sources and token tables are integrity-checked, not rewritten.
+extend-exclude = ["reference/**", "upstream/**", "requirements-lock.txt"]
+
+[default.extend-identifiers]
+CPY001 = "CPY001"
+recieve = "recieve"
+calender = "calender"

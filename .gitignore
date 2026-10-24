@@ -1,0 +1,34 @@
+# Python toolchain artifacts: caches, build output, and coverage files the
+# gates produce. Local gate runs and proof runs must never leak into commits.
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.complexipy_cache/
+.mutmut-cache/
+mutants/
+build/
+dist/
+*.egg-info/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.import_linter_cache/
+.env
+.env.*
+!.env.example
+# Model and experiment artifacts live on the compute host or in the HF cache.
+*.safetensors
+*.bin
+*.pt
+*.pth
+artifacts/
+checkpoints/
+data/
+runs/
+.cache/
+report/

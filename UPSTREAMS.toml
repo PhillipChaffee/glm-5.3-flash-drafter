@@ -1,0 +1,45 @@
+schema_version = 1
+
+[model]
+repo_id = "zai-org/GLM-5.3-Flash"
+url = "https://huggingface.co/zai-org/GLM-5.3-Flash"
+revision = "46a050bec13002ad29ee795c16e61cf4fa3c4a9c"
+local_path = "reference/glm-5.3-flash"
+files = [
+  "README.md", "LICENSE", "config.json", "generation_config.json",
+  "tokenizer_config.json", "tokenizer.json", "chat_template.jinja",
+  "processor_config.json", "model.safetensors.index.json",
+]
+
+[deepspec]
+url = "https://github.com/deepseek-ai/DeepSpec"
+revision = "005e03b81cec38b7da6399833d609ee89a2587f2"
+local_path = "upstream/deepspec"
+reading_paths = [
+  "config/dspark", "deepspec/modeling/dspark", "deepspec/eval/dspark",
+  "deepspec/trainer/dspark_trainer.py", "deepspec/trainer/base_trainer.py",
+  "deepspec/data/parser.py", "scripts/data/prepare_target_cache.py",
+  "deepspec/eval/base_evaluator.py", "scripts/data/README.md", "requirements.txt",
+]
+
+[transformers]
+url = "https://github.com/huggingface/transformers"
+revision = "50e35cc0ca18ec19b80653690de553e6decf74f5"
+local_path = "reference/transformers"
+files = [
+  "LICENSE", "docs/source/en/model_doc/glm5_next.md",
+  "src/transformers/models/glm5_next/__init__.py",
+  "src/transformers/models/glm5_next/configuration_glm5_next.py",
+  "src/transformers/models/glm5_next/modeling_glm5_next.py",
+  "src/transformers/models/glm5_next/modular_glm5_next.py",
+  "src/transformers/cache_utils.py", "src/transformers/utils/output_capturing.py",
+  "src/transformers/generation/utils.py",
+]
+
+[baseline]
+url = "https://github.com/PhillipChaffee/67-sus-95-clean"
+revision = "4f982ea91585c6607bbba3a6a95da2555b88ded6"
+template_path = "python/init-python-repo/templates"
+
+# These revisions identify inspected sources; GPU/runtime compatibility is unvalidated.
+# requirements-lock.txt locks the bootstrap tools, not a training environment.
