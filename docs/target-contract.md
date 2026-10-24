@@ -20,13 +20,20 @@ comparison. The [project goal](../README.md) is to train and study our own draft
 - Nested text config: 45 layers, hidden size 4096, vocabulary size 154880.
 - Hybrid attention: 34 linear-attention layers and 11 sparse-attention layers.
 - mHC uses four streams. Intermediate decoder outputs are shaped
-  `[batch, sequence, 4, 4096]`; the final hyper-head averages streams and
-  normalizes to `[batch, sequence, 4096]`.
-- Feature layer selection, stream reduction/projection, and normalization are
-  open design decisions. Offline hooks and online features must agree.
+  `[batch, sequence, 4, 4096]`; the final hyper-head averages streams to
+  `[batch, sequence, 4096]`, then a separate final RMSNorm normalizes that mean.
+- The approved initial feature control uses completed-block boundaries
+  `[20,28,32,36,40,44]`, in order, with unweighted stream means. A separate raw
+  boundary-45 mean supplies teacher supervision through target final RMSNorm
+  exactly once and the frozen output head. Offline hooks and online features
+  must agree; six/seven-feature alternatives remain controlled comparisons.
 
 Source: `reference/glm-5.3-flash/config.json` and
 `reference/transformers/src/transformers/models/glm5_next/modeling_glm5_next.py`.
+
+The [approved first drafter baseline](research/first-drafter-recommendation.md)
+records the selected architecture, feature and loss contracts, and mHC rationale.
+Its combined runtime behavior still requires validation.
 
 ## Prompt and output contract
 
@@ -66,7 +73,7 @@ backend-dependent comparison baseline.
 
 ## First training milestone
 
-1. Choose the training recipe, GPU/sharding setup, and initial modality scope.
+1. Use the approved model contract; choose the dataset, training setup, and modality scope.
 2. Make sure that configuration loading and prompt/loss-mask handling match the recipe.
 3. Make sure that captured features and reconstructed teacher logits match the target.
 4. Create a tiny cache and train a drafter with recorded configuration and results.

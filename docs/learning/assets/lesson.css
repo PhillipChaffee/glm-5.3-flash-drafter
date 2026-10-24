@@ -1,0 +1,49 @@
+:root {
+  color-scheme: light;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #172b3a;
+  background: #fafaf8;
+  line-height: 1.65;
+  font-size: 18px;
+}
+body { margin: 0; }
+main { max-width: 920px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+a { color: #175b91; text-underline-offset: 0.16em; }
+nav { font-size: 0.9rem; margin-bottom: 2rem; }
+h1, h2, h3 { line-height: 1.2; color: #142837; }
+h1 { font-size: clamp(2rem, 6vw, 3rem); letter-spacing: -0.035em; }
+h2 { margin-top: 2.6rem; font-size: 1.6rem; }
+h3 { margin-top: 1.8rem; font-size: 1.15rem; }
+p, ul, ol { max-width: 76ch; }
+.eyebrow { color: #17565d; font-weight: 700; letter-spacing: 0.08em; font-size: 0.8rem; text-transform: uppercase; }
+.lead { font-size: 1.15rem; }
+.note { border-left: 4px solid #147d86; background: #e9f4f2; padding: 0.8rem 1rem; margin: 1.5rem 0; }
+.caption, .sources { color: #425466; font-size: 0.88rem; }
+.streams { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem; margin: 1rem 0; }
+.stream { padding: 0.7rem 0.25rem; background: #e5effc; border: 1px solid #9cbbe4; border-radius: 0.3rem; text-align: center; }
+.stream strong { display: block; font-size: 1.65rem; font-variant-numeric: tabular-nums; }
+.after .stream { background: #e3f4e8; border-color: #91c6a0; }
+.step { padding: 0.6rem 1rem; border: 1px solid #d0d7df; background: white; margin: 0.75rem 0; }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; margin: 1.2rem 0; background: white; }
+caption { text-align: left; font-size: 0.9rem; padding-bottom: 0.5rem; color: #425466; }
+th, td { text-align: left; padding: 0.6rem 0.7rem; border-bottom: 1px solid #d3dbe2; vertical-align: top; }
+th { background: #eef2f5; }
+.matrix td, .matrix th { text-align: center; font-variant-numeric: tabular-nums; }
+.matrix .diagonal { background: #dbeafe; font-weight: 700; }
+.matrix .sum { color: #185b31; background: #e6f4e9; font-weight: 700; }
+code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 0.86em; }
+pre { padding: 1rem; overflow-x: auto; background: #eef2f5; border-radius: 0.3rem; line-height: 1.55; }
+details { margin: 1rem 0; padding: 0.8rem 1rem; border: 1px solid #c5d3dc; border-radius: 0.3rem; background: white; }
+summary { cursor: pointer; font-weight: 650; }
+:focus-visible { outline: 3px solid #147d86; outline-offset: 4px; }
+footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #c5d3dc; font-size: 0.9rem; }
+@media print {
+  :root { font-size: 11pt; background: white; }
+  main { max-width: none; padding: 0; }
+  nav { display: none; }
+  h2, h3 { break-after: avoid; }
+  pre, table, .streams, details { break-inside: avoid; }
+  pre { white-space: pre-wrap; }
+  a { color: inherit; }
+}

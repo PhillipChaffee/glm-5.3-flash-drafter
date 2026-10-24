@@ -11,8 +11,27 @@ The target model also verifies proposed tokens during speculative decoding.
 **Drafter**:
 A trained model that proposes candidate tokens for the target model to verify.
 
+**Hidden state**:
+The internal representation of a token at a particular point in a model's computation.
+
+**Residual stream**:
+A token representation carried between model layers and updated along the way.
+
+**Manifold-Constrained Hyper-Connections (mHC)**:
+A residual-connection design that carries multiple streams and constrains how
+their existing contents are mixed between layers.
+
+**Mixture of experts (MoE)**:
+A network design that routes tokens to selected expert networks for processing.
+
 **Context feature**:
 A target-model representation supplied as an input to the drafter.
+
+**Capture pool**:
+The collection of target representations recorded as candidates for feature selection.
+
+**Feature set**:
+The ordered selection of context features supplied to a drafter.
 
 **Teacher state**:
 The target representation immediately before its output head, used to compute
