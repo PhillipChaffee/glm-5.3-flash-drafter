@@ -19,6 +19,22 @@ Before planning work, read `README.md` for the project goal and current mileston
   a separate, unvalidated integration decision.
 - Work in a Git worktree. If delegating, use `openai/gpt-6.1-sol`.
 
+## Agent skills
+
+### Issue tracker
+
+Use GitHub Issues in `PhillipChaffee/glm-5.3-flash-drafter`.
+Read `docs/agents/issue-tracker.md` before tracker operations.
+
+### Triage labels
+
+Use the standard triage roles in `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Use the single-context glossary and decision records described in
+`docs/agents/domain.md`.
+
 ## Comments
 
 - Describe the present state.

@@ -27,7 +27,8 @@ add "file-length" "./effective-lines-gate.sh"
 
 add "spell-check" "typos"
 add "markdown-lint" "markdownlint-cli2 \"**/*.md\""
-add "link-check" "lychee --no-progress ."
+# Private tracker links require the existing token or the local GitHub CLI login.
+add "link-check" 'GITHUB_TOKEN="${GITHUB_TOKEN:-$(gh auth token)}" lychee --no-progress .'
 add "secret-scan" "gitleaks detect --no-git --redact"
 add "duplication" "jscpd"
 # The submodule is a reference, not an installed environment; audit its pins separately.

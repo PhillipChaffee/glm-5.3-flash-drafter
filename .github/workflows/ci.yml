@@ -59,6 +59,9 @@ jobs:
 
   hygiene:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read  # the link checker reads private Wayfinder issue links
     timeout-minutes: 20  # bounds a hung network gate; GitHub's default is 360
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-hygiene
@@ -127,6 +130,8 @@ jobs:
       - name: Markdown lint (markdownlint-cli2 v0.23.2)
         run: markdownlint-cli2 "**/*.md"
       - name: Link check (lychee v0.24.2)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: lychee --no-progress .
       - name: Secret scan (gitleaks v8.30.1)
         run: gitleaks detect --source . --redact
