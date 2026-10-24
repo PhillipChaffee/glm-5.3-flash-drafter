@@ -3,6 +3,16 @@
 Read source revisions from `../UPSTREAMS.toml`. Local references are frozen
 copies; their integrity is checked by `python -m glm_flash_drafter`.
 
+Before implementing features, cache handling, or serving, read the
+[prior-work assessment](research/glm5-salvage-assessment.md). The old project
+contains a custom Flash port and SGLang integration with historical smoke
+results; their contracts and known gaps should guide revalidation here.
+
+Before selecting a drafter recipe or reusing its training cache, read the
+[feasibility review](research/dspark-flash-feasibility.md) for evidence about
+features, data, and state recovery. Use the public checkpoint as an optional
+comparison. The [project goal](../README.md) is to train and study our own drafter.
+
 ## Target identity and features
 
 - Hub ID: `zai-org/GLM-5.3-Flash`.
@@ -54,14 +64,17 @@ The checkpoint contains MTP-associated metadata and weights, but the inspected
 Transformers implementation excludes the MTP layer. Native MTP is a separate
 backend-dependent comparison baseline.
 
-## First milestone
+## First training milestone
 
-1. Choose the serving engine, GPU/sharding setup, and initial modality scope.
-2. Validate configuration loading and prompt/loss-mask handling.
-3. Prove offline/online feature parity and native/reconstructed logit parity.
-4. Prove state recovery for rejection and partial/full draft acceptance.
-5. Create a tiny cache and run one training step before scaling data collection.
+1. Choose the training recipe, GPU/sharding setup, and initial modality scope.
+2. Make sure that configuration loading and prompt/loss-mask handling match the recipe.
+3. Make sure that captured features and reconstructed teacher logits match the target.
+4. Create a tiny cache and train a drafter with recorded configuration and results.
+5. Save and reload the checkpoint, then test training recovery before scaling data collection.
 
-DeepSpec's evaluator reports acceptance statistics, not latency. Measure actual
-speedup separately against target-only decoding on the same hardware/workload.
+Before interpreting speculative evaluation, make sure that training and serving
+features agree. Test state recovery for rejection and partial/full acceptance.
+DeepSpec's evaluator reports acceptance statistics, not latency. Measure speed
+separately against target-only decoding on the same hardware/workload. Record
+slow or unsuccessful experiments alongside successful ones.
 The longer source review is in `research/repository-setup.md`.
