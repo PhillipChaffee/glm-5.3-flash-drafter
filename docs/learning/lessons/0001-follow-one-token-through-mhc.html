@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Follow one token through mHC</title>
+  <link rel="stylesheet" href="../assets/lesson.css">
+</head>
+<body>
+<main>
+  <nav><a href="../guides/drafter-config.html">Attention heads, RoPE, MLPs, and training terms</a></nav>
+  <header>
+    <p class="eyebrow">GLM Flash drafter · one worked example</p>
+    <h1>How four identical streams become different</h1>
+    <p class="lead">A stream is a working representation of the same token. GLM carries four of them, learns how to update each, and keeps carrying all four through its layers.</p>
+  </header>
+
+  <section id="copies">
+    <h2>1. Start with four copies</h2>
+    <p>Real GLM has <strong>4,096 numbers in each stream, for each token</strong>. We will use just one number per stream so the arithmetic stays visible. These are invented teaching values, not measurements from GLM.</p>
+    <div class="streams" aria-label="Four initial streams, each containing the toy value ten">
+      <div class="stream">Stream 1<strong>10</strong></div>
+      <div class="stream">Stream 2<strong>10</strong></div>
+      <div class="stream">Stream 3<strong>10</strong></div>
+      <div class="stream">Stream 4<strong>10</strong></div>
+    </div>
+    <p>GLM really does start its streams as identical embedding copies. They do not come with predefined jobs such as syntax, reasoning, or memory.</p>
+  </section>
+
+  <section id="update">
+    <h2>2. Add different amounts of one update</h2>
+    <p>The mHC wrapper combines the streams into one input for attention or a feed-forward operation. In this toy, pre-weights <code>[0.2, 0.4, 0.6, 0.8]</code> make that input <code>20</code>. Pretend the operation returns an update of <code>2</code>.</p>
+    <div class="step"><strong>One computed update:</strong> <code>2</code></div>
+    <div class="step"><strong>Four post gates:</strong> <code>0.25, 0.5, 0.75, 1.0</code></div>
+    <div class="step"><strong>Four update amounts:</strong> <code>0.5, 1.0, 1.5, 2.0</code></div>
+    <div class="streams after" aria-label="Updated streams containing ten point five, eleven, eleven point five, and twelve">
+      <div class="stream">Stream 1<strong>10.5</strong></div>
+      <div class="stream">Stream 2<strong>11</strong></div>
+      <div class="stream">Stream 3<strong>11.5</strong></div>
+      <div class="stream">Stream 4<strong>12</strong></div>
+    </div>
+    <p><strong>This is how identical copies can diverge.</strong> The post gates add different amounts. In the model, the pre/post gates are learned and depend on the incoming representations. They are not required to sum to one.</p>
+    <p>The existing streams also travel through a bypass mixer. Because all four incoming values are ten, the permitted mixer below leaves this particular bypass unchanged.</p>
+  </section>
+
+  <section id="matrix">
+    <h2>3. Constrain the bypass mixer</h2>
+    <p>A matrix is a table of weights. Here a row tells us how to construct one output stream from the four input streams. In GLM, each entry scales a whole 4,096-number stream vector; our toy follows one coordinate.</p>
+    <div class="scroll">
+      <table class="matrix">
+        <caption>One valid mixer C. Rows are outputs; columns are inputs.</caption>
+        <thead><tr><th scope="col">Output</th><th scope="col">Input 1</th><th scope="col">Input 2</th><th scope="col">Input 3</th><th scope="col">Input 4</th><th scope="col">Row sum</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">1</th><td class="diagonal">0.625</td><td>0.125</td><td>0.125</td><td>0.125</td><td class="sum">1</td></tr>
+          <tr><th scope="row">2</th><td>0.125</td><td class="diagonal">0.625</td><td>0.125</td><td>0.125</td><td class="sum">1</td></tr>
+          <tr><th scope="row">3</th><td>0.125</td><td>0.125</td><td class="diagonal">0.625</td><td>0.125</td><td class="sum">1</td></tr>
+          <tr><th scope="row">4</th><td>0.125</td><td>0.125</td><td>0.125</td><td class="diagonal">0.625</td><td class="sum">1</td></tr>
+        </tbody>
+        <tfoot><tr><th scope="row">Column sum</th><td class="sum">1</td><td class="sum">1</td><td class="sum">1</td><td class="sum">1</td><td>4 total</td></tr></tfoot>
+      </table>
+    </div>
+    <p>The first row means <code>output1 = 0.625 × input1 + 0.125 × input2 + 0.125 × input3 + 0.125 × input4</code>.</p>
+    <ul>
+      <li><strong>Nonnegative weights:</strong> blend inputs without giving any input a negative mixing coefficient. The hidden-state values themselves may still be negative.</li>
+      <li><strong>Every row sums to one:</strong> each output is a weighted average rather than an arbitrarily amplified sum.</li>
+      <li><strong>Every column sums to one:</strong> each input has total weight one across the outputs. Pure mixing preserves the average across streams.</li>
+    </ul>
+    <p>Both sets of unit sums make a matrix <em>doubly stochastic</em>. The full name <strong>Manifold-Constrained Hyper-Connections</strong> refers to restricting the residual mixer to this allowed family of matrices. The example is symmetric, but the learned matrix need not be.</p>
+    <div class="note"><strong>The constraint applies only to this bypass mixer.</strong> The separately added update can change the mean, as our toy did: ten became an average of 11.25. The pre/post gates follow different rules.</div>
+  </section>
+
+  <section id="why">
+    <h2>4. Why bother with those rules?</h2>
+    <p>If a bypass simply doubled every stream at every step, ten steps would multiply its values by <code>2¹⁰ = 1,024</code>. Unrestricted mixing can produce unwanted amplification across depth.</p>
+    <p>Row sums alone also permit every output to copy only the first stream. For input <code>[4, 0, 0, 0]</code>, that produces <code>[4, 4, 4, 4]</code>: the mean changes from one to four, and the other streams are discarded. Column sums prevent that particular concentration.</p>
+    <p>An exactly doubly stochastic <em>fixed</em> mixer cannot increase the combined Euclidean length of the streams. That is a useful property of the bypass route, not a guarantee about the whole network or its gradients.</p>
+    <p>It also does not preserve every detail. A matrix with <code>0.25</code> in every cell is allowed but replaces every stream with the same average, losing their differences.</p>
+    <details>
+      <summary>How does GLM enforce the rule?</summary>
+      <p>The network produces mixing scores, turns them into positive weights, and repeatedly normalizes rows and columns. Fixing column totals can disturb row totals, which is why it repeats. This procedure is called Sinkhorn normalization.</p>
+      <p>GLM uses 20 iterations and small numerical epsilon terms, so the numerical condition is approximate. Its matrix changes with the incoming state. Our table is an already-valid illustration.</p>
+    </details>
+  </section>
+
+  <section id="code">
+    <h2>5. Run the tiny example</h2>
+    <p>This uses only Python. The line computing <code>update</code> stands in for the whole normalized attention/feed-forward computation; this is not a miniature trained GLM.</p>
+    <pre><code class="language-python" data-check="python">streams = [10.0] * 4
+pre = [0.2, 0.4, 0.6, 0.8]
+post = [0.25, 0.5, 0.75, 1.0]
+C = [[0.625 if i == j else 0.125 for j in range(4)]
+     for i in range(4)]
+
+combined = sum(a * x for a, x in zip(pre, streams))
+update = 0.1 * combined  # Invented teaching operation.
+mixed = [sum(w * x for w, x in zip(row, streams)) for row in C]
+result = [old + gate * update for old, gate in zip(mixed, post)]
+
+assert all(sum(row) == 1.0 for row in C)
+assert all(sum(column) == 1.0 for column in zip(*C))
+assert result == [10.5, 11.0, 11.5, 12.0]
+print(result)</code></pre>
+    <p class="caption">Executed successfully on 2026-10-24. The independent checks also covered subsequent mean-preserving mixing and example iterative normalization.</p>
+    <details><summary>Recall check: without the added update, would four identical copies become different?</summary><p>No. Unit-sum rows blend four identical values back into that same value. The different post-gated update amounts make them diverge here.</p></details>
+    <details><summary>Recall check: does the constraint forbid negative stream values?</summary><p>No. It constrains the mixing weights. A blend of negative hidden-state values can still be negative.</p></details>
+  </section>
+
+  <section id="deepseek">
+    <h2>6. Does DeepSeek combine its streams?</h2>
+    <p><strong>Yes for the conditioning features, while its native drafter also has its own four internal streams.</strong> Those are two separate facts.</p>
+    <ol>
+      <li>The native DeepSeek target carries four streams through its blocks.</li>
+      <li>At each of three selected blocks, it averages those four streams into one context vector. The target keeps its full continuing state.</li>
+      <li>Those three vectors condition the native drafter. Separately, the drafter expands its anchor/mask embeddings into four new draft streams.</li>
+      <li>Its three mHC draft layers update those streams. A learned final reduction produces a single vector for the output path.</li>
+    </ol>
+    <p>The four draft streams are not the four raw target streams handed across unchanged. DeepSeek's public Qwen/Gemma reference drafters use ordinary single-stream residuals instead.</p>
+    <p>For our approved initial GLM drafter, we average the target streams at each selected layer and feed the resulting vectors to a single-stream dense draft model. GLM itself ends with an unweighted stream average followed by normalization; native DeepSeek uses a learned final stream reduction.</p>
+  </section>
+
+  <footer>
+    <p><strong>Primary reading:</strong> <a href="https://github.com/huggingface/transformers/blob/50e35cc0ca18ec19b80653690de553e6decf74f5/src/transformers/models/glm5_next/modeling_glm5_next.py#L218-L336">GLM's mHC implementation and diagram</a>. The <a href="https://arxiv.org/html/2512.24880v2#S4">mHC paper</a> explains the constraint; <a href="https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash-DSpark/blob/62af8fffb2f7030cac4de2f0169f5b8d1101b646/inference/model.py#L851-L935">native DeepSeek code</a> shows averaging and fresh draft-stream expansion.</p>
+    <p>Ask the agent about any step that still feels unclear. The point is to follow the state changes, not memorize the terminology.</p>
+    <p><a href="../guides/drafter-config.html">Continue to the configuration reference</a> · <a href="../RESOURCES.md">Sources</a></p>
+  </footer>
+</main>
+</body>
+</html>

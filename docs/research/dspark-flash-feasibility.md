@@ -48,8 +48,10 @@ semantics and context remains prefix-only. The [paper][dspark] and
 [reference context mask][context-mask] support this interpretation.
 
 Averaging is lossy, but loss is not automatically a bug. Different stream
-arrangements can have the same mean and still produce different learned
-readouts. The mHC paper's mean-preservation result concerns its doubly
+arrangements can have the same mean and still produce different subsequent
+intermediate computations or different learned readouts. At GLM's final boundary,
+the same mean gives the same logits under its fixed final norm and output head.
+The mHC paper's mean-preservation result concerns its doubly
 stochastic residual mixing; it does not prove that intermediate means retain
 everything useful for prediction. GLM's native final readout is indeed
 `norm(mean(streams))`, but that establishes the final interface, not optimal

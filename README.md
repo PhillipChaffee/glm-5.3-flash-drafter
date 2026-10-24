@@ -13,6 +13,11 @@ whether custom training is justified.
 - [Domain glossary](CONTEXT.md): shared terms for the experiment.
 - [Target contract](docs/target-contract.md): verified architecture facts and
   integration boundaries.
+- [Approved first drafter baseline](docs/research/first-drafter-recommendation.md):
+  selected model, feature, and loss contracts, with their rationale.
+- [mHC walkthrough](docs/learning/lessons/0001-follow-one-token-through-mhc.html)
+  and [configuration reference](docs/learning/guides/drafter-config.html):
+  HTML learning material to open locally.
 - [Source manifest](UPSTREAMS.toml): exact upstream revisions and reading paths.
 - [Setup research](docs/research/repository-setup.md): rationale and source links.
 - [Prior-work salvage assessment](docs/research/glm5-salvage-assessment.md):
@@ -72,9 +77,11 @@ for results and baseline adaptations.
 
 ## Current milestone
 
-Choose the first training recipe and make its data and feature conventions
-explicit. Build a small, understood cache, train a drafter, and save and reload
-its checkpoint. Use correctness tests to make the results interpretable.
+The model, feature-control, and loss baseline is approved. Next define the first
+dataset and per-turn training contract, then choose the software stack and compute
+setup. Specify the broad-capture and six/seven-feature comparison protocol before
+implementation. The experiment will build a small cache, train a drafter, and
+save and reload its checkpoint, with correctness checks for interpretable results.
 
 Compare against public drafters as useful reference points. Run controlled
 experiments to understand acceptance, speed, and design choices. See the

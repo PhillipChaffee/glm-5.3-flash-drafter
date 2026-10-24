@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Read the drafter configuration</title>
+  <link rel="stylesheet" href="../assets/lesson.css">
+</head>
+<body>
+<main>
+  <nav><a href="../lessons/0001-follow-one-token-through-mhc.html">Four-stream mHC worked example</a></nav>
+  <header>
+    <p class="eyebrow">Quick reference · approved first-run settings</p>
+    <h1>What those configuration words mean</h1>
+    <p class="lead">The selected initial values describe our drafter. They are not all properties of GLM itself or requirements of DSpark.</p>
+  </header>
+  <nav aria-label="Reference topics"><a href="#mlp">Gated SiLU</a> · <a href="#heads">Attention heads</a> · <a href="#rope">RoPE theta</a> · <a href="#stops">Stop IDs</a> · <a href="#loss">Loss</a> · <a href="#position">Position weighting</a></nav>
+
+  <section id="mlp">
+    <h2>Gated SiLU MLP, width 12,288</h2>
+    <p><strong>SiLU</strong> is an activation function. <strong>ELSI-C</strong> is a separate analysis method for selecting target layers. They are not the same term.</p>
+    <p>An MLP is the feed-forward network that transforms each token's representation. In the selected gated MLP:</p>
+    <pre><code>up   = x @ W_up             # 4,096 numbers → 12,288
+gate = SiLU(x @ W_gate)     # 4,096 numbers → 12,288
+out  = (up * gate) @ W_down # 12,288 numbers → 4,096
+
+SiLU(z) = z * sigmoid(z)</code></pre>
+    <p><code>@</code> is matrix multiplication; <code>*</code> is element-by-element multiplication. The gate continuously modifies the expanded features. SiLU can be negative or greater than one: this is not a binary switch or a percentage restricted to zero through one.</p>
+    <p><strong>Width 12,288 means 12,288 intermediate features per token.</strong> Both branches have that width; their product has the same width. It does not count tokens, streams, or experts. This gated form is also called SwiGLU.</p>
+    <p class="sources"><a href="https://arxiv.org/html/2002.05202v1#S2">Gated-FFN paper</a> · <a href="https://arxiv.org/abs/2610.12939v1">ELSI/ELSI-C paper</a></p>
+  </section>
+
+  <section id="heads">
+    <h2>Query heads and KV heads</h2>
+    <p>Each query head computes its own pattern of attention over available positions, producing its own output vector. A KV head provides one set of key and value representations.</p>
+    <p>These come from learned projections. For our selected 64-head, 64-dimensional layout, the query projection produces 4,096 numbers, then reshapes them into 64 groups of 64. We do not simply chop the original input into fixed semantic categories.</p>
+    <div class="scroll"><table>
+      <caption>Different ways to share the key/value representations</caption>
+      <thead><tr><th scope="col">Arrangement</th><th scope="col">Example</th><th scope="col">What is shared?</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Multi-head attention</th><td>64 query / 64 KV</td><td>One KV pair for each query head.</td></tr>
+        <tr><th scope="row">Grouped-query attention</th><td>64 query / 8 KV</td><td>Eight query heads share each KV pair.</td></tr>
+        <tr><th scope="row">Multi-query attention</th><td>64 query / 1 KV</td><td>All query heads share one KV pair.</td></tr>
+      </tbody>
+    </table></div>
+    <pre><code>query head 1 ─┐
+query head 2 ─┼─ read the same keys and values
+query head 3 ─┘
+
+Different queries → different attention weights → different outputs.</code></pre>
+    <p>Sharing K/V saves their stored representations. With equal dimensions and precision, eight KV heads need one-eighth the K/V-cache storage of 64 KV heads; total model memory does not shrink by that factor.</p>
+    <details><summary>A tiny example with two query heads sharing K/V</summary><p>Use keys <code>(1,0)</code> and <code>(0,1)</code>, with scalar values ten and twenty. Query <code>(1,0)</code> favors the first; query <code>(0,1)</code> favors the second. Scaled dot-product attention produces approximately <strong>13.302</strong> and <strong>16.698</strong>. Same K/V, different results.</p></details>
+    <p class="sources"><a href="https://arxiv.org/html/2305.13245v3#S2.SS2">GQA paper</a> · <a href="https://github.com/vllm-project/speculators/blob/b9c51bcfc134923eae2b6a6f8246ae3500d5c42f/src/speculators/models/dflash/model_definitions.py#L56-L154">Projections and head reshaping</a></p>
+  </section>
+
+  <section id="rope">
+    <h2>RoPE theta 10,000</h2>
+    <p>RoPE rotates pairs of query/key coordinates as token position advances. Think of several clock hands moving at different speeds. Relative position changes how the rotated queries and keys match.</p>
+    <p><strong>Theta sets the spread of those rotation speeds.</strong> For default RoPE, frequency for pair <code>i</code> is <code>theta ** (-2*i/d)</code>, where <code>d</code> is the number of rotating dimensions.</p>
+    <p>For an eight-dimensional toy with theta 10,000, the four speeds are:</p>
+    <pre><code>1, 0.1, 0.01, 0.001 radians per token position
+
+At position 10, their angles are:
+10, 1, 0.1, 0.01 radians</code></pre>
+    <p>Our selected 64-dimensional heads have 32 rotating coordinate pairs. Theta is not a maximum context length or a numerical precision setting. Increasing it changes different frequencies by different factors; it does not guarantee better long-context behavior.</p>
+    <p class="sources"><a href="https://arxiv.org/html/2104.09864v5#S3.SS2.SSS2">RoFormer equations</a></p>
+  </section>
+
+  <section id="stops">
+    <h2>Stop IDs</h2>
+    <p>A model produces vocabulary IDs. Some IDs represent protocol markers rather than ordinary words. The generation configuration says which markers end the current generation.</p>
+    <table>
+      <caption>Exact pinned GLM-5.3-Flash stopping IDs</caption>
+      <thead><tr><th scope="col">ID</th><th scope="col">Token</th><th scope="col">Meaning</th></tr></thead>
+      <tbody>
+        <tr><td>154820</td><td><code>&lt;|endoftext|&gt;</code></td><td>End-of-text marker; also configured as padding.</td></tr>
+        <tr><td>154827</td><td><code>&lt;|user|&gt;</code></td><td>Boundary for the next user turn.</td></tr>
+        <tr><td>154829</td><td><code>&lt;|observation|&gt;</code></td><td>Observation/tool-result boundary, relevant to tool handoff.</td></tr>
+      </tbody>
+    </table>
+    <p>All are stopping IDs, but they have different protocol meanings. The internal draft-mask row 154856 is separate. The tokenizer's actual <code>[MASK]</code> string has ID 154821.</p>
+    <p class="sources"><a href="https://huggingface.co/zai-org/GLM-5.3-Flash/blob/46a050bec13002ad29ee795c16e61cf4fa3c4a9c/tokenizer.json#L5-L94">Token strings</a> · <a href="https://huggingface.co/zai-org/GLM-5.3-Flash/blob/46a050bec13002ad29ee795c16e61cf4fa3c4a9c/generation_config.json">Generation configuration</a></p>
+  </section>
+
+  <section id="loss">
+    <h2>Loss: the score training tries to reduce</h2>
+    <p>A loss is a numerical objective. Training changes the drafter's parameters to reduce it. Our selected baseline combines three signals:</p>
+    <ul>
+      <li><strong>Cross-entropy:</strong> reward probability assigned to the teacher's most likely next token.</li>
+      <li><strong>Total variation:</strong> make the draft's whole token-probability distribution closer to the teacher's.</li>
+      <li><strong>Confidence loss:</strong> train the extra head to estimate acceptance probability.</li>
+    </ul>
+    <pre><code>teacher probabilities: [0.8, 0.2]
+draft probabilities:   [0.6, 0.4]
+
+TV = 0.5 * (abs(0.8 - 0.6) + abs(0.2 - 0.4)) = 0.2
+distribution overlap = 0.8</code></pre>
+    <p>That overlap is the one-step stochastic acceptance probability at the same prefix, under standard rejection sampling. It is not greedy-match accuracy or whole-block acceptance.</p>
+    <p>Our selected coefficients are <code>0.1 × cross-entropy + 0.9 × TV + 1.0 × confidence BCE</code>. They define the initial recipe, not a universal default. Lower training loss alone does not establish faster generation.</p>
+    <p class="sources"><a href="https://github.com/vllm-project/speculators/blob/b9c51bcfc134923eae2b6a6f8246ae3500d5c42f/src/speculators/losses/eager.py#L92-L142">CE and TV definitions</a> · <a href="https://github.com/vllm-project/speculators/blob/b9c51bcfc134923eae2b6a6f8246ae3500d5c42f/src/speculators/models/dspark/metrics.py#L85-L105">Confidence training</a></p>
+  </section>
+
+  <section id="position">
+    <h2>Position weighting, not precision weighting</h2>
+    <p>These weights make an error near the start of a proposed block contribute more to training than an error near its end:</p>
+    <pre><code>proposal:   1     2     3     4     5     6     7     8
+weight:   1.00  0.78  0.61  0.47  0.37  0.29  0.22  0.17
+
+weight[j] = exp(-j / 4), with j starting at zero</code></pre>
+    <p>An early rejection ends the accepted prefix, so later proposals cannot be retained in that round. That motivates giving early correctness extra weight. This particular exponential schedule is a heuristic.</p>
+    <p>The weight uses the offset inside the draft block, not the absolute conversation position. Our selected reduction divides the weighted sum by the number of valid prediction positions, not by the sum of weights.</p>
+    <div class="note"><strong>Numerical precision is another topic.</strong> BF16 and FP32 are floating-point number formats. They affect representation and computation; they are not position weights.</div>
+    <p class="sources"><a href="https://github.com/vllm-project/speculators/blob/b9c51bcfc134923eae2b6a6f8246ae3500d5c42f/src/speculators/losses/utils.py#L17-L48">Position decay</a> · <a href="https://github.com/vllm-project/speculators/blob/b9c51bcfc134923eae2b6a6f8246ae3500d5c42f/src/speculators/losses/utils.py#L269-L304">Loss reduction</a></p>
+  </section>
+
+  <footer>
+    <p>Ask follow-up questions one concept at a time. The user approved this initial baseline on 2026-10-24; its model behavior still needs testing.</p>
+    <p>Scalar examples were checked on 2026-10-24; no trained model was run. <a href="../lessons/0001-follow-one-token-through-mhc.html">Return to the mHC example</a>.</p>
+  </footer>
+</main>
+</body>
+</html>
