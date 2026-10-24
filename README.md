@@ -8,6 +8,9 @@ whether custom training is justified.
 
 ## Start here
 
+- [Plan our first custom GLM-5.3-Flash drafter experiment](https://github.com/PhillipChaffee/glm-5.3-flash-drafter/issues/2):
+  the active Wayfinder map and its decision tickets.
+- [Domain glossary](CONTEXT.md): shared terms for the experiment.
 - [Target contract](docs/target-contract.md): verified architecture facts and
   integration boundaries.
 - [Source manifest](UPSTREAMS.toml): exact upstream revisions and reading paths.
@@ -53,6 +56,8 @@ pinned in `UPSTREAMS.toml`. The PR checks enforce lint/docstrings, formatting,
 strict types, branch-inclusive coverage of at least 95%, cognitive complexity,
 file length, and the baseline hygiene/dependency gates. Install the non-Python
 tool versions listed in `.github/workflows/ci.yml` before using the full runner.
+The link check uses `GITHUB_TOKEN` or your existing `gh` login to read private
+tracker links.
 
 Third-party snapshots retain upstream formatting and are excluded from
 first-party code/prose checks; their contents are checksum-verified. Secret
