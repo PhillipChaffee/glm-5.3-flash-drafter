@@ -3,126 +3,406 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Follow one token through mHC</title>
+  <title>Follow “sat” through an attention sublayer with mHC</title>
   <link rel="stylesheet" href="../assets/lesson.css">
 </head>
-<body>
+<body class="mhc-lesson">
 <main>
-  <nav><a href="../guides/drafter-config.html">Attention heads, RoPE, MLPs, and training terms</a></nav>
+  <nav><a href="../guides/drafter-config.html">Configuration reference</a></nav>
   <header>
-    <p class="eyebrow">GLM Flash drafter · one worked example</p>
-    <h1>How four identical streams become different</h1>
-    <p class="lead">A stream is a working representation of the same token. GLM carries four of them, learns how to update each, and keeps carrying all four through its layers.</p>
+    <p class="eyebrow">One example, from input to output</p>
+    <h1>Follow “sat” through<br>an attention sublayer with mHC.</h1>
+    <p class="lead">The input sequence is “The cat sat.” We follow “sat” from its token embedding to its output hidden state.</p>
+    <p>A vector is an ordered list of numbers. A matrix arranges numbers in rows and columns. Each number is an element.</p>
+    <p>A token embedding is the vector looked up for a token. A hidden state is a token’s internal numerical representation.</p>
+    <p>A language model predicts the next token from the input sequence. The token embedding for <code>sat</code> stays the same regardless of the surrounding tokens. Its hidden state needs information from those tokens to help predict what comes next.</p>
+    <p>Attention lets <code>sat</code> use information from <code>The</code> and <code>cat</code>. This walkthrough explains why each operation helps build that hidden state. We stop at <code>X1</code>, before the later computation that predicts the next token.</p>
+    <p>This untrained example uses three elements per vector. The token embeddings and matrices below are fixed for the entire example.</p>
   </header>
 
-  <section id="copies">
-    <h2>1. Start with four copies</h2>
-    <p>Real GLM has <strong>4,096 numbers in each stream, for each token</strong>. We will use just one number per stream so the arithmetic stays visible. These are invented teaching values, not measurements from GLM.</p>
-    <div class="streams" aria-label="Four initial streams, each containing the toy value ten">
-      <div class="stream">Stream 1<strong>10</strong></div>
-      <div class="stream">Stream 2<strong>10</strong></div>
-      <div class="stream">Stream 3<strong>10</strong></div>
-      <div class="stream">Stream 4<strong>10</strong></div>
+  <details id="terms">
+    <summary>Terminology: one concept, one term</summary>
+    <p>The text, video, and Python example use these names consistently. Shared definitions live in the <a href="../../../CONTEXT.md">project glossary</a>.</p>
+    <dl class="mhc-terms">
+      <dt>Input sequence</dt><dd>The ordered input tokens: <code>The / cat / sat</code>.</dd>
+      <dt>Token embedding</dt><dd>A vector looked up for a token. The rows of <code>E</code> are the three token embeddings.</dd>
+      <dt>Residual stream</dt><dd>A path that carries a vector through the model. Each row of <code>X0</code> or <code>X1</code> corresponds to one residual stream.</dd>
+      <dt>Hidden state</dt><dd>The numerical representation of a token. Here, <code>X0</code> is the input hidden state and <code>X1</code> is the output hidden state.</dd>
+      <dt>Input mapping <code>a</code></dt><dd>Combines the residual streams into one vector before attention.</dd>
+      <dt>RMSNorm</dt><dd>Root mean square layer normalization. Its output for the input sequence is <code>Z</code>.</dd>
+      <dt>Value projection <code>Wv</code></dt><dd>A linear transformation that produces the value matrix: <code>V = Z @ Wv</code>.</dd>
+      <dt>Identity matrix</dt><dd>A matrix that leaves its input vector unchanged.</dd>
+      <dt>Query vector <code>q</code></dt><dd>Attention compares this vector with each key vector. Here, <code>q</code> belongs to <code>sat</code>.</dd>
+      <dt>Key matrix <code>K</code></dt><dd>One key vector per input token, arranged as rows.</dd>
+      <dt>Value matrix <code>V</code></dt><dd>One value vector per input token, arranged as rows.</dd>
+      <dt>Attention scores</dt><dd>The scaled dot products before softmax: <code>q @ transpose(K) / sqrt(3)</code>.</dd>
+      <dt>Attention weights</dt><dd>The numbers returned by softmax. Each multiplies the corresponding value vector.</dd>
+      <dt>Attention output projection</dt><dd>The linear transformation after attention. It is an identity matrix in this example.</dd>
+      <dt>Attention output <code>y</code></dt><dd>The weighted sum of the value vectors, followed by the attention output projection.</dd>
+      <dt>Residual mapping <code>C</code></dt><dd>Mixes the residual streams along the residual path.</dd>
+      <dt>Residual contribution <code>B</code></dt><dd>The residual path’s contribution to the output hidden state: <code>B = C @ X0</code>.</dd>
+      <dt>Output mapping <code>b</code></dt><dd>Scales the attention output for each residual stream.</dd>
+      <dt>Attention contribution <code>A</code></dt><dd>The attention path’s contribution to the output hidden state: <code>A = b @ y</code>.</dd>
+      <dt>Attention sublayer</dt><dd>The attention computation within a Transformer layer. This example applies mHC’s three mappings around it.</dd>
+    </dl>
+    <p>The mapping names follow the <a href="https://arxiv.org/html/2512.24880v2#S4.SS1">mHC paper</a>. Our local symbols are <code>a = H_pre</code>, <code>b = transpose(H_post)</code>, and <code>C = H_res</code>.</p>
+    <p>The <a href="https://arxiv.org/html/1706.03762v7#S3">Transformer paper</a> supplies the attention terminology. <code>A</code> and <code>B</code> name the two contributions in this example’s equation <code>X1 = B + A</code>.</p>
+  </details>
+
+  <aside class="mhc-follow" aria-label="The input sequence throughout the lesson">
+    <span>Input sequence:</span> <span class="mhc-token">The</span> <span class="mhc-token">cat</span>
+    <span class="mhc-token mhc-focus">sat</span> <span>Following <code>sat</code></span>
+  </aside>
+
+  <section id="watch" aria-labelledby="watch-title">
+    <h2 id="watch-title">Watch the example</h2>
+    <p>The <a href="https://github.com/3b1b/manim">ManimGL</a> animation follows the same eleven steps as the text. Each step explains its purpose, shows the operation, then carries its result forward.</p>
+    <video id="mhc-video" controls playsinline preload="metadata" width="1920" height="1080"
+           poster="../assets/mhc-walkthrough-poster.jpg" aria-label="Follow sat through an attention sublayer with mHC" aria-describedby="video-help">
+      <source src="../assets/mhc-walkthrough.mp4" type="video/mp4">
+      <p><a href="../assets/mhc-walkthrough.mp4">Download the animation</a>, or read the example below.</p>
+    </video>
+    <div id="chapter-controls" class="mhc-controls" hidden>
+      <div class="mhc-chapters" role="group" aria-label="Play a 40-second step, then pause">
+        <button type="button" data-start="0">1 · Token embeddings</button>
+        <button type="button" data-start="40">2 · Residual streams</button>
+        <button type="button" data-start="80">3 · Input mapping</button>
+        <button type="button" data-start="120">4 · RMSNorm</button>
+        <button type="button" data-start="160">5 · Value matrix</button>
+        <button type="button" data-start="200">6 · Attention scores</button>
+        <button type="button" data-start="240">7 · Attention weights</button>
+        <button type="button" data-start="280">8 · Attention output</button>
+        <button type="button" data-start="320">9 · Residual mapping</button>
+        <button type="button" data-start="360">10 · Output mapping</button>
+        <button type="button" data-start="400">11 · Output hidden state</button>
+      </div>
+      <div class="mhc-playback">
+        <button type="button" id="play-all">Play the whole example</button>
+        <label for="playback-speed">Speed</label>
+        <select id="playback-speed">
+          <option value="0.5">0.5×</option>
+          <option value="0.75">0.75×</option>
+          <option value="1" selected>1×</option>
+        </select>
+      </div>
     </div>
-    <p>GLM really does start its streams as identical embedding copies. They do not come with predefined jobs such as syntax, reasoning, or memory.</p>
+    <p id="video-help" class="caption">Start at step 1. Each numbered button plays one step and pauses at its end. The video is silent, with explanations on screen.</p>
+    <p id="video-status" class="caption" role="status"></p>
+    <p class="caption">Matrices show up to three decimals. The computation uses unrounded Python <code>float</code> numbers. Using rounded elements can change the last displayed digit. <a href="#example">Read the eleven steps</a> · <a href="../animations/README.md">Source and render instructions</a></p>
   </section>
 
-  <section id="update">
-    <h2>2. Add different amounts of one update</h2>
-    <p>The mHC wrapper combines the streams into one input for attention or a feed-forward operation. In this toy, pre-weights <code>[0.2, 0.4, 0.6, 0.8]</code> make that input <code>20</code>. Pretend the operation returns an update of <code>2</code>.</p>
-    <div class="step"><strong>One computed update:</strong> <code>2</code></div>
-    <div class="step"><strong>Four post gates:</strong> <code>0.25, 0.5, 0.75, 1.0</code></div>
-    <div class="step"><strong>Four update amounts:</strong> <code>0.5, 1.0, 1.5, 2.0</code></div>
-    <div class="streams after" aria-label="Updated streams containing ten point five, eleven, eleven point five, and twelve">
-      <div class="stream">Stream 1<strong>10.5</strong></div>
-      <div class="stream">Stream 2<strong>11</strong></div>
-      <div class="stream">Stream 3<strong>11.5</strong></div>
-      <div class="stream">Stream 4<strong>12</strong></div>
-    </div>
-    <p><strong>This is how identical copies can diverge.</strong> The post gates add different amounts. In the model, the pre/post gates are learned and depend on the incoming representations. They are not required to sum to one.</p>
-    <p>The existing streams also travel through a bypass mixer. Because all four incoming values are ten, the permitted mixer below leaves this particular bypass unchanged.</p>
+  <section id="example" data-step="1">
+    <h2>1. Start with “The cat sat”</h2>
+    <p>A token is one unit of model input. In this example, each word is one token. A token identifier tells the model which token it received. Its number does not measure meaning or similarity.</p>
+    <p>A <a href="https://arxiv.org/html/1706.03762v7#S3.SS4">token embedding</a> supplies a vector that the model can transform and combine. Training adjusts real token embeddings to help predict tokens. These example vectors are chosen by hand, with no assigned meaning for each element.</p>
+    <p>Use these token embeddings:</p>
+    <table class="matrix" data-trace="token_embeddings">
+      <caption>E: token embeddings for the input sequence</caption>
+      <thead><tr><th scope="col">Token</th><th scope="col">Element 1</th><th scope="col">Element 2</th><th scope="col">Element 3</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">The</th><td>1.000</td><td>2.000</td><td>3.000</td></tr>
+        <tr><th scope="row">cat</th><td>-4.000</td><td>5.000</td><td>6.000</td></tr>
+        <tr><th scope="row">sat</th><td>7.000</td><td>-8.000</td><td>9.000</td></tr>
+      </tbody>
+    </table>
+    <p>We follow the final token, <code>sat</code>. Its token embedding is <code>[7, -8, 9]</code>.</p>
+    <p class="note">Carry forward: <code>sat</code>’s token embedding and the input sequence <code>The / cat / sat</code>.</p>
   </section>
 
-  <section id="matrix">
-    <h2>3. Constrain the bypass mixer</h2>
-    <p>A matrix is a table of weights. Here a row tells us how to construct one output stream from the four input streams. In GLM, each entry scales a whole 4,096-number stream vector; our toy follows one coordinate.</p>
-    <div class="scroll">
-      <table class="matrix">
-        <caption>One valid mixer C. Rows are outputs; columns are inputs.</caption>
-        <thead><tr><th scope="col">Output</th><th scope="col">Input 1</th><th scope="col">Input 2</th><th scope="col">Input 3</th><th scope="col">Input 4</th><th scope="col">Row sum</th></tr></thead>
-        <tbody>
-          <tr><th scope="row">1</th><td class="diagonal">0.625</td><td>0.125</td><td>0.125</td><td>0.125</td><td class="sum">1</td></tr>
-          <tr><th scope="row">2</th><td>0.125</td><td class="diagonal">0.625</td><td>0.125</td><td>0.125</td><td class="sum">1</td></tr>
-          <tr><th scope="row">3</th><td>0.125</td><td>0.125</td><td class="diagonal">0.625</td><td>0.125</td><td class="sum">1</td></tr>
-          <tr><th scope="row">4</th><td>0.125</td><td>0.125</td><td>0.125</td><td class="diagonal">0.625</td><td class="sum">1</td></tr>
-        </tbody>
-        <tfoot><tr><th scope="row">Column sum</th><td class="sum">1</td><td class="sum">1</td><td class="sum">1</td><td class="sum">1</td><td>4 total</td></tr></tfoot>
-      </table>
-    </div>
-    <p>The first row means <code>output1 = 0.625 × input1 + 0.125 × input2 + 0.125 × input3 + 0.125 × input4</code>.</p>
-    <ul>
-      <li><strong>Nonnegative weights:</strong> blend inputs without giving any input a negative mixing coefficient. The hidden-state values themselves may still be negative.</li>
-      <li><strong>Every row sums to one:</strong> each output is a weighted average rather than an arbitrarily amplified sum.</li>
-      <li><strong>Every column sums to one:</strong> each input has total weight one across the outputs. Pure mixing preserves the average across streams.</li>
-    </ul>
-    <p>Both sets of unit sums make a matrix <em>doubly stochastic</em>. The full name <strong>Manifold-Constrained Hyper-Connections</strong> refers to restricting the residual mixer to this allowed family of matrices. The example is symmetric, but the learned matrix need not be.</p>
-    <div class="note"><strong>The constraint applies only to this bypass mixer.</strong> The separately added update can change the mean, as our toy did: ten became an average of 11.25. The pre/post gates follow different rules.</div>
-  </section>
-
-  <section id="why">
-    <h2>4. Why bother with those rules?</h2>
-    <p>If a bypass simply doubled every stream at every step, ten steps would multiply its values by <code>2¹⁰ = 1,024</code>. Unrestricted mixing can produce unwanted amplification across depth.</p>
-    <p>Row sums alone also permit every output to copy only the first stream. For input <code>[4, 0, 0, 0]</code>, that produces <code>[4, 4, 4, 4]</code>: the mean changes from one to four, and the other streams are discarded. Column sums prevent that particular concentration.</p>
-    <p>An exactly doubly stochastic <em>fixed</em> mixer cannot increase the combined Euclidean length of the streams. That is a useful property of the bypass route, not a guarantee about the whole network or its gradients.</p>
-    <p>It also does not preserve every detail. A matrix with <code>0.25</code> in every cell is allowed but replaces every stream with the same average, losing their differences.</p>
+  <section id="copies" data-step="2">
+    <h2>2. Initialize four residual streams</h2>
+    <p>Four residual streams let one token carry different vectors across layers. The <a href="https://arxiv.org/html/2512.24880v2#S1.E3">mHC mappings</a> let those streams exchange information and receive different amounts of a sublayer’s output. This adds room for different representations without running attention separately for every residual stream.</p>
+    <p>At the model’s start, each token has one token embedding. <a href="https://github.com/huggingface/transformers/blob/50e35cc0ca18ec19b80653690de553e6decf74f5/src/transformers/models/glm5_next/modeling_glm5_next.py#L1494">Copying it</a> gives every residual stream the same starting information. Copying adds no information yet. Different attention contributions can make the residual streams different in step 11.</p>
+    <p>Each residual stream carries one vector through the attention sublayer. Copy <code>sat</code>’s token embedding from step 1 into each of the four residual streams.</p>
+    <table class="matrix mhc-state" data-trace="input_hidden_state">
+      <caption>X0: sat’s input hidden state, with one row per residual stream</caption>
+      <thead><tr><th scope="col">Residual stream</th><th scope="col">Element 1</th><th scope="col">Element 2</th><th scope="col">Element 3</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">1</th><td>7.000</td><td>-8.000</td><td>9.000</td></tr>
+        <tr><th scope="row">2</th><td>7.000</td><td>-8.000</td><td>9.000</td></tr>
+        <tr><th scope="row">3</th><td>7.000</td><td>-8.000</td><td>9.000</td></tr>
+        <tr><th scope="row">4</th><td>7.000</td><td>-8.000</td><td>9.000</td></tr>
+      </tbody>
+    </table>
+    <p>All four rows belong to <code>sat</code>. The input sequence contains three tokens. Each token has four residual streams.</p>
+    <p>The input hidden state <code>X0</code> supplies two paths. The attention path computes the attention contribution <code>A</code>. The residual path computes the residual contribution <code>B</code>.</p>
     <details>
-      <summary>How does GLM enforce the rule?</summary>
-      <p>The network produces mixing scores, turns them into positive weights, and repeatedly normalizes rows and columns. Fixing column totals can disturb row totals, which is why it repeats. This procedure is called Sinkhorn normalization.</p>
-      <p>GLM uses 20 iterations and small numerical epsilon terms, so the numerical condition is approximate. Its matrix changes with the incoming state. Our table is an already-valid illustration.</p>
+      <summary>See the two paths</summary>
+      <pre aria-label="Attention path and residual path both start from input hidden state X0"><code>       input mapping → RMSNorm → attention → output mapping → A
+X0 ───┤                                                        ├── add → X1
+       residual mapping ───────────────────────────────────── B</code></pre>
     </details>
+    <p>First follow the attention path. In step 9, use the saved <code>X0</code> for the residual path. Add <code>B</code> and <code>A</code> in step 11.</p>
+    <p class="note">Save input hidden state <code>X0</code> for both paths.</p>
+  </section>
+
+  <section id="read" data-step="3">
+    <h2>3. Apply the input mapping</h2>
+    <p>The attention sublayer <a href="https://github.com/huggingface/transformers/blob/50e35cc0ca18ec19b80653690de553e6decf74f5/src/transformers/models/glm5_next/modeling_glm5_next.py#L223-L229">takes one vector per token</a>, while <code>X0</code> has four residual streams. The input mapping controls how much each residual stream supplies to that vector. This lets attention use information from all four streams at its existing vector size.</p>
+    <p>The residual path still has <code>X0</code>. Combining the streams for attention does not replace the saved input hidden state.</p>
+    <p>The input mapping combines the residual streams into one vector. Use this input mapping <code>a</code> with <code>X0</code> from step 2:</p>
+    <pre class="mhc-equation" data-trace="input_mapping" aria-label="Input mapping a">[ 0.200   0.400   0.600   0.800 ]</pre>
+    <p>The symbol <code>@</code> means matrix multiplication. Each element of <code>a</code> multiplies the matching row of <code>X0</code>. Add the four resulting vectors:</p>
+    <pre><code>u_sat = a @ X0
+      = 0.2 × [7, -8, 9]
+      + 0.4 × [7, -8, 9]
+      + 0.6 × [7, -8, 9]
+      + 0.8 × [7, -8, 9]</code></pre>
+    <pre class="mhc-equation" data-trace="input_mapping_output" aria-label="Input-mapping output for sat">[ 14.000  -16.000   18.000 ]</pre>
+    <p>For <code>The</code> and <code>cat</code>, use their token embeddings from step 1. Initialize four residual streams for each token, as in step 2. Apply the input mapping to each token.</p>
+    <figure>
+      <figcaption>Input-mapping output: The / cat / sat</figcaption>
+      <pre data-trace="sequence_input_mapping_output">[  2.000    4.000    6.000 ]
+[ -8.000   10.000   12.000 ]
+[ 14.000  -16.000   18.000 ]</pre>
+    </figure>
+    <p class="note">Carry forward: the input-mapping output for each token. Keep input hidden state <code>X0</code> saved.</p>
+  </section>
+
+  <section id="rmsnorm" data-step="4">
+    <h2>4. Apply RMSNorm</h2>
+    <p>The input mapping can change the overall size of a vector. <a href="https://docs.pytorch.org/docs/2.14/generated/torch.nn.RMSNorm.html">RMSNorm</a> reduces that size variation before the query, key, and value projections. Otherwise, larger inputs can produce larger attention scores even when their relative element patterns are the same.</p>
+    <p>RMSNorm divides every element by the same positive number. This keeps their relative pattern before any learned scale. The projections receive a more consistent input scale.</p>
+    <p>Use <code>u_sat = [14, -16, 18]</code> from step 3.</p>
+    <p>RMSNorm applies root mean square layer normalization. Use scale <code>1</code> for every element. Set epsilon to <code>0.000001</code>.</p>
+    <p>Add epsilon to the mean of the squared elements, before taking the square root. This keeps RMSNorm’s final divisor, <code>rms</code>, nonzero even when every input element is zero. The divisor for averaging the squares remains <code>3</code>, the number of elements:</p>
+    <pre><code>rms   = sqrt((14² + (-16)² + 18²) / 3 + 0.000001) ≈ 16.083
+z_sat = u_sat / rms ≈ [0.870, -0.995, 1.119]</code></pre>
+    <p>Apply RMSNorm to the input-mapping outputs for <code>The</code> and <code>cat</code> from step 3.</p>
+    <figure>
+      <figcaption>Z: RMSNorm output, in input sequence order</figcaption>
+      <pre data-trace="rmsnorm_output">[  0.463   0.926   1.389 ]
+[ -0.790   0.987   1.184 ]
+[  0.870  -0.995   1.119 ]</pre>
+    </figure>
+    <p class="note">Carry forward: RMSNorm output <code>Z</code>. Keep input hidden state <code>X0</code> saved.</p>
+  </section>
+
+  <section id="values" data-step="5">
+    <h2>5. Compute the value matrix</h2>
+    <p>Attention needs information to combine from each input position. A learned <a href="https://arxiv.org/html/1706.03762v7#S3.SS2.SSS2">value projection</a> lets the model choose combinations of elements to supply that information. Training can adapt those combinations for later layers. Without the value projection, this calculation combines the unchanged rows of <code>Z</code>.</p>
+    <p>Here, <code>Wv</code> is fixed for the example. Its numbers illustrate the transformation rather than a learned choice of useful information.</p>
+    <p>The value projection is a linear transformation that produces value vectors. Apply this value projection <code>Wv</code> to <code>Z</code> from step 4:</p>
+    <pre data-trace="value_projection" aria-label="Value projection Wv">[  0.400   0.000  -0.200 ]
+[  0.000   0.200   0.100 ]
+[  0.100   0.100   0.000 ]</pre>
+    <p>Compute the value matrix <code>V = Z @ Wv</code>. For <code>sat</code>, element 1 is approximately <code>0.870(0.4) + (-0.995)(0) + 1.119(0.1) ≈ 0.460</code>.</p>
+    <table class="matrix" data-trace="value_matrix">
+      <caption>V: value matrix, with one value vector per input token</caption>
+      <thead><tr><th scope="col">Token</th><th scope="col">Element 1</th><th scope="col">Element 2</th><th scope="col">Element 3</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">The</th><td>0.324</td><td>0.324</td><td>0.000</td></tr>
+        <tr><th scope="row">cat</th><td>-0.197</td><td>0.316</td><td>0.257</td></tr>
+        <tr><th scope="row">sat</th><td>0.460</td><td>-0.087</td><td>-0.274</td></tr>
+      </tbody>
+    </table>
+    <p class="note">Save value matrix <code>V</code>. Next, compute the attention weights for its value vectors.</p>
+  </section>
+
+  <section id="scores" data-step="6">
+    <h2>6. Compute the attention scores</h2>
+    <p>Attention needs a way to compare <code>sat</code> with each available input position. A query vector represents <code>sat</code> for that comparison. A key vector represents a position to compare against. Training can shape these comparisons through separate <a href="https://arxiv.org/html/1706.03762v7#S3.SS2.SSS2">query and key projections</a>.</p>
+    <p>Attention compares a query vector with a key vector to compute an attention score. Use identity matrices for the query and key projections, so <code>Q = K = Z</code>.</p>
+    <p>These identity projections demonstrate the calculation without learned comparisons. All three input positions are available to <code>sat</code> because they occur at or before it.</p>
+    <p>The query vector <code>q</code> for <code>sat</code> is the final row of <code>Z</code> from step 4:</p>
+    <pre class="mhc-equation" data-trace="query_vector" aria-label="Query vector q for sat">[ 0.870  -0.995   1.119 ]</pre>
+    <p>The key matrix <code>K</code> contains one key vector per input token. Its transpose, <code>Kᵀ</code>, exchanges rows and columns:</p>
+    <table class="matrix" data-trace="transposed_key_matrix">
+      <caption>Kᵀ: transposed key matrix, with columns The / cat / sat</caption>
+      <thead><tr><th scope="col">Element</th><th scope="col">The</th><th scope="col">cat</th><th scope="col">sat</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">1</th><td>0.463</td><td>-0.790</td><td>0.870</td></tr>
+        <tr><th scope="row">2</th><td>0.926</td><td>0.987</td><td>-0.995</td></tr>
+        <tr><th scope="row">3</th><td>1.389</td><td>1.184</td><td>1.119</td></tr>
+      </tbody>
+    </table>
+    <p>A dot product multiplies matching elements, then sums them. Longer vectors can produce larger dot products because they sum more products.</p>
+    <p>Large differences between attention scores can make softmax assign almost all weight to one position. The attention weights then respond less to small changes during training. The <a href="https://arxiv.org/html/1706.03762v7#S3.SS2.SSS1">square-root divisor</a> offsets the effect of vector length before softmax.</p>
+    <p>The mean is the sum divided by the count. The mean square uses squared elements in that mean. The Transformer paper derives this divisor for independent query and key elements with mean zero and mean square one. Under that assumption, the dot product’s root mean square grows with the square root of the element count.</p>
+    <p>Here, the query vector has three elements. Compute each attention score as a query–key dot product divided by <code>sqrt(3)</code>:</p>
+    <pre><code>attention_scores = q @ transpose(K) / sqrt(3)
+
+The: (0.870×0.463    + (-0.995)×0.926    + 1.119×1.389) / sqrt(3)
+cat: (0.870×(-0.790) + (-0.995)×0.987    + 1.119×1.184) / sqrt(3)
+sat: (0.870×0.870    + (-0.995)×(-0.995) + 1.119×1.119) / sqrt(3)</code></pre>
+    <p>Using the unrounded elements gives these attention scores:</p>
+    <pre data-trace="attention_scores" aria-label="Attention scores for The, cat, sat">[ 0.598  -0.198   1.732 ]</pre>
+    <p class="note">Carry forward: these attention scores. Keep value matrix <code>V</code> from step 5.</p>
+  </section>
+
+  <section id="weights" data-step="7">
+    <h2>7. Compute the attention weights</h2>
+    <p>Attention needs weights that specify how much of each value vector to combine. <a href="https://arxiv.org/html/1706.03762v7#S3.SS2.SSS1">Softmax</a> turns the attention scores into positive weights with a fixed total of one. Larger scores receive more weight, while smaller scores can still contribute. That fixed total makes the result a weighted mean of the value vectors.</p>
+    <p>These attention weights apply to positions in the input sequence. They do not predict the next token. The model computes next-token probabilities later.</p>
+    <p>Use the attention scores from step 6.</p>
+    <p>Apply softmax to the attention scores. First, exponentiate each attention score. Next, divide each result by the sum of those results. This produces the attention weights:</p>
+    <pre class="mhc-equation" data-trace="attention_weights" aria-label="Attention weights for The, cat, sat">[ 0.219   0.099   0.682 ]</pre>
+    <p>The attention weights are positive and sum to one. Their order is <code>The / cat / sat</code>.</p>
+    <p class="note">Carry forward: the attention weights and value matrix <code>V</code> from step 5.</p>
+  </section>
+
+  <section id="update" data-step="8">
+    <h2>8. Compute the attention output</h2>
+    <p>The token embedding for <code>sat</code> alone contains no information about <code>The</code> or <code>cat</code> in this input sequence. The <a href="https://arxiv.org/html/1706.03762v7#S3.SS2">weighted sum of value vectors</a> brings information from all three positions into <code>sat</code>’s attention output. The attention weights determine how much each value vector supplies.</p>
+    <p>This makes the attention output depend on the input sequence. A trained model can use that dependence to represent relationships between tokens. These chosen numbers demonstrate the information flow, not a learned interpretation of the sentence.</p>
+    <p>Multiply the attention weights from step 7 by the value matrix <code>V</code> from step 5:</p>
+    <pre><code>y = attention_weights @ V
+  ≈ 0.219 × [ 0.324,  0.324,  0.000]   ← The
+  + 0.099 × [-0.197,  0.316,  0.257]   ← cat
+  + 0.682 × [ 0.460, -0.087, -0.274]   ← sat</code></pre>
+    <p>The attention output projection is an identity matrix in this example. It keeps the same numbers in the attention output <code>y</code>:</p>
+    <pre class="mhc-equation" data-trace="attention_output" aria-label="Attention output y for sat">[ 0.365   0.043  -0.161 ]</pre>
+    <p>The attention output projection acts on a vector’s elements. The output mapping in step 10 acts across residual streams. It produces one attention contribution per residual stream from the attention output <code>y</code>.</p>
+    <p class="note">Save attention output <code>y</code>. Now follow the residual path from input hidden state <code>X0</code>, saved in step 2.</p>
+  </section>
+
+  <section id="matrix" data-step="9">
+    <h2>9. Apply the residual mapping</h2>
+    <p>The <a href="https://arxiv.org/html/2512.24880v2#S1.E3">residual path</a> carries existing information past the attention calculation. Attention can then add information without having to recreate the entire input hidden state. Mixing lets each residual stream use information already held in other residual streams.</p>
+    <p>Across many layers, unconstrained residual mappings can repeatedly enlarge or shrink the carried values. The <a href="https://arxiv.org/html/2512.24880v2#S4.SS1">mHC constraint</a> limits this mixing while allowing information to move between residual streams.</p>
+    <p>Use input hidden state <code>X0</code> from step 2. Keep attention output <code>y</code> saved for step 10.</p>
+    <p>The residual mapping mixes the residual streams along the residual path. Use this residual mapping <code>C</code>:</p>
+    <table class="matrix" data-trace="residual_mapping">
+      <caption>C: residual mapping, with output residual streams as rows and input residual streams as columns</caption>
+      <thead><tr><th scope="col">Output ↓ / Input →</th><th scope="col">1</th><th scope="col">2</th><th scope="col">3</th><th scope="col">4</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">1</th><td class="diagonal">0.500</td><td>0.250</td><td>0.125</td><td>0.125</td></tr>
+        <tr><th scope="row">2</th><td>0.125</td><td class="diagonal">0.500</td><td>0.250</td><td>0.125</td></tr>
+        <tr><th scope="row">3</th><td>0.125</td><td>0.125</td><td class="diagonal">0.500</td><td>0.250</td></tr>
+        <tr><th scope="row">4</th><td>0.250</td><td>0.125</td><td>0.125</td><td class="diagonal">0.500</td></tr>
+      </tbody>
+    </table>
+    <p>Compute the residual contribution <code>B = C @ X0</code>. For residual stream 1:</p>
+    <pre><code>B₁ = 0.500 × [7, -8, 9] + 0.250 × [7, -8, 9]
+   + 0.125 × [7, -8, 9] + 0.125 × [7, -8, 9]
+   = [7, -8, 9]</code></pre>
+    <p>Each residual stream in <code>X0</code> carries the same vector. Each row of <code>C</code> sums to one. So the four rows of the residual contribution match:</p>
+    <pre data-trace="residual_contribution" aria-label="Residual contribution B for sat">[ 7.000  -8.000   9.000 ]
+[ 7.000  -8.000   9.000 ]
+[ 7.000  -8.000   9.000 ]
+[ 7.000  -8.000   9.000 ]</pre>
+    <div id="why">
+      <p>The residual mapping <code>C</code> satisfies the mHC constraint:</p>
+      <ul>
+        <li>All elements of <code>C</code> are nonnegative. Elements of <code>X0</code> can still be negative.</li>
+        <li>Every row sums to one. Row 1 gives <code>0.500 + 0.250 + 0.125 + 0.125 = 1</code>.</li>
+        <li>Every column sums to one. Column 1 gives <code>0.500 + 0.125 + 0.125 + 0.250 = 1</code>.</li>
+      </ul>
+      <p>A doubly stochastic matrix has nonnegative elements. Every row and every column sums to one.</p>
+      <p>Here, the mean is the sum of the four residual-stream vectors divided by four. The residual mapping preserves this mean.</p>
+      <p>Nonnegative elements and unit row sums make each output element a weighted mean of the corresponding input elements. It stays between their smallest and largest values.</p>
+      <p>Unit column sums keep each input residual stream’s total weight at one across the output residual streams. This preserves the mean across residual streams.</p>
+      <p>Manifold-Constrained Hyper-Connections (mHC) restricts the residual mapping to doubly stochastic matrices. Repeated doubly stochastic residual mappings keep these properties. Mixing can still reduce differences between residual streams.</p>
+      <p>The attention contribution can change the mean and the range in the output hidden state. The constraint controls residual mixing. It does not guarantee stability for the whole model.</p>
+    </div>
+    <p class="note">Save residual contribution <code>B</code>. Attention output <code>y</code> remains available from step 8.</p>
+  </section>
+
+  <section id="write" data-step="10">
+    <h2>10. Apply the output mapping</h2>
+    <p>Attention produces one attention output for <code>sat</code>, but the next sublayer needs four residual streams. The <a href="https://arxiv.org/html/2512.24880v2#S1.E3">output mapping</a> lets each residual stream receive its own amount of that attention output. Separate scales let the streams change differently while reusing one attention result.</p>
+    <p>Here, identical attention contributions leave the initially identical residual streams identical. The different scales in <code>b</code> let them become different. These scales are chosen for the example. They do not assign fixed jobs to the residual streams.</p>
+    <p>The output mapping scales the attention output for each residual stream. Apply this output mapping <code>b</code> to <code>y</code> from step 8:</p>
+    <pre data-trace="output_mapping" aria-label="Output mapping b">[ 0.250 ]
+[ 0.500 ]
+[ 1.000 ]
+[ 1.500 ]</pre>
+    <p>Compute the attention contribution <code>A = b @ y</code>. Its rows are <code>0.25y</code>, <code>0.50y</code>, <code>1.00y</code>, and <code>1.50y</code>:</p>
+    <table class="matrix mhc-state" data-trace="attention_contribution">
+      <caption>A: attention contribution, with one row per residual stream</caption>
+      <thead><tr><th scope="col">Residual stream</th><th scope="col">Element 1</th><th scope="col">Element 2</th><th scope="col">Element 3</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">1</th><td>0.091</td><td>0.011</td><td>-0.040</td></tr>
+        <tr><th scope="row">2</th><td>0.183</td><td>0.021</td><td>-0.081</td></tr>
+        <tr><th scope="row">3</th><td>0.365</td><td>0.043</td><td>-0.161</td></tr>
+        <tr><th scope="row">4</th><td>0.548</td><td>0.064</td><td>-0.242</td></tr>
+      </tbody>
+    </table>
+    <p>For residual stream 1, <code>0.25 × y ≈ [0.091, 0.011, -0.040]</code>. Residual stream 4 receives six times that attention contribution because <code>1.50 / 0.25 = 6</code>.</p>
+    <p>The elements of the output mapping need not sum to one. The doubly stochastic constraint applies to the residual mapping <code>C</code>.</p>
+    <p class="note">Carry forward: attention contribution <code>A</code> and residual contribution <code>B</code> from step 9.</p>
+  </section>
+
+  <section id="result" data-step="11">
+    <h2>11. Compute the output hidden state</h2>
+    <p><a href="https://github.com/huggingface/transformers/blob/50e35cc0ca18ec19b80653690de553e6decf74f5/src/transformers/models/glm5_next/modeling_glm5_next.py#L1336-L1347">Adding the two contributions</a> lets attention modify the carried representation. The residual contribution supplies existing information from <code>X0</code>. The attention contribution supplies information from the input sequence through attention.</p>
+    <p>Without <code>B</code>, only the attention contribution remains. Without <code>A</code>, this update adds no information from attention. Their sum gives the next sublayer a hidden state that includes both paths.</p>
+    <p>The output hidden state is <code>X1 = B + A</code>. Add the residual contribution and attention contribution for each residual stream:</p>
+    <pre><code>B₁ + A₁ ≈ [7.000, -8.000,  9.000]
+        + [0.091,  0.011, -0.040]
+        = [7.091, -7.989,  8.960]</code></pre>
+    <table class="matrix mhc-state" data-trace="output_hidden_state">
+      <caption>X1: sat’s output hidden state</caption>
+      <thead><tr><th scope="col">Residual stream</th><th scope="col">Element 1</th><th scope="col">Element 2</th><th scope="col">Element 3</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">1</th><td>7.091</td><td>-7.989</td><td>8.960</td></tr>
+        <tr><th scope="row">2</th><td>7.183</td><td>-7.979</td><td>8.919</td></tr>
+        <tr><th scope="row">3</th><td>7.365</td><td>-7.957</td><td>8.839</td></tr>
+        <tr><th scope="row">4</th><td>7.548</td><td>-7.936</td><td>8.758</td></tr>
+      </tbody>
+    </table>
+    <p>The input sequence is still “The cat sat.” The residual streams in <code>X0</code> carried identical vectors. In <code>X1</code>, they carry different vectors.</p>
+    <p>The rows of the residual contribution matched. The output mapping produced different attention contributions, so the residual streams became different.</p>
+    <div class="note">The output hidden state <code>X1</code> completes this attention sublayer with mHC. It contains all four residual streams for the next sublayer.</div>
+    <p>A trained language model continues through later sublayers. It then <a href="https://arxiv.org/html/1706.03762v7#S3.SS4">converts its final representation into next-token probabilities</a>. That later prediction can use information gathered from the input sequence. Our numerical example stops at <code>X1</code> and predicts no token.</p>
+    <p id="recap">The entire computation is:</p>
+    <pre class="mhc-equation"><code>X1 = C @ X0 + b @ Attention(RMSNorm(a @ X0))
+     └───┘   └────────────────────────────┘
+       B                   A</code></pre>
+    <p>The attention path uses the same input sequence from steps 1–8. The residual path uses the input hidden state saved in step 2.</p>
   </section>
 
   <section id="code">
-    <h2>5. Run the tiny example</h2>
-    <p>This uses only Python. The line computing <code>update</code> stands in for the whole normalized attention/feed-forward computation; this is not a miniature trained GLM.</p>
-    <pre><code class="language-python" data-check="python">streams = [10.0] * 4
-pre = [0.2, 0.4, 0.6, 0.8]
-post = [0.25, 0.5, 0.75, 1.0]
-C = [[0.625 if i == j else 0.125 for j in range(4)]
-     for i in range(4)]
-
-combined = sum(a * x for a, x in zip(pre, streams))
-update = 0.1 * combined  # Invented teaching operation.
-mixed = [sum(w * x for w, x in zip(row, streams)) for row in C]
-result = [old + gate * update for old, gate in zip(mixed, post)]
-
-assert all(sum(row) == 1.0 for row in C)
-assert all(sum(column) == 1.0 for column in zip(*C))
-assert result == [10.5, 11.0, 11.5, 12.0]
-print(result)</code></pre>
-    <p class="caption">Executed successfully on 2026-10-24. The independent checks also covered subsequent mean-preserving mixing and example iterative normalization.</p>
-    <details><summary>Recall check: without the added update, would four identical copies become different?</summary><p>No. Unit-sum rows blend four identical values back into that same value. The different post-gated update amounts make them diverge here.</p></details>
-    <details><summary>Recall check: does the constraint forbid negative stream values?</summary><p>No. It constrains the mixing weights. A blend of negative hidden-state values can still be negative.</p></details>
-  </section>
-
-  <section id="deepseek">
-    <h2>6. Does DeepSeek combine its streams?</h2>
-    <p><strong>Yes for the conditioning features, while its native drafter also has its own four internal streams.</strong> Those are two separate facts.</p>
-    <ol>
-      <li>The native DeepSeek target carries four streams through its blocks.</li>
-      <li>At each of three selected blocks, it averages those four streams into one context vector. The target keeps its full continuing state.</li>
-      <li>Those three vectors condition the native drafter. Separately, the drafter expands its anchor/mask embeddings into four new draft streams.</li>
-      <li>Its three mHC draft layers update those streams. A learned final reduction produces a single vector for the output path.</li>
-    </ol>
-    <p>The four draft streams are not the four raw target streams handed across unchanged. DeepSeek's public Qwen/Gemma reference drafters use ordinary single-stream residuals instead.</p>
-    <p>For our approved initial GLM drafter, we average the target streams at each selected layer and feed the resulting vectors to a single-stream dense draft model. GLM itself ends with an unweighted stream average followed by normalization; native DeepSeek uses a learned final stream reduction.</p>
+    <h2>Recompute the example</h2>
+    <p>The <a href="../animations/mhc_toy.py">Python example</a> prints every matrix with the same names used above. Run it from the repository root:</p>
+    <pre><code>python3.12 docs/learning/animations/mhc_toy.py</code></pre>
+    <p>The <a href="../animations/mhc_walkthrough.py">Manim scene</a> uses that computation. The tests compare every displayed matrix against it.</p>
+    <p>This example fixes the input mapping, output mapping, and residual mapping. GLM computes them from the input hidden state and uses 4,096 elements per residual stream.</p>
+    <p>The residual mapping <code>C</code> corresponds to <code>comb.transpose(-1, -2)</code> in the pinned GLM implementation.</p>
   </section>
 
   <footer>
-    <p><strong>Primary reading:</strong> <a href="https://github.com/huggingface/transformers/blob/50e35cc0ca18ec19b80653690de553e6decf74f5/src/transformers/models/glm5_next/modeling_glm5_next.py#L218-L336">GLM's mHC implementation and diagram</a>. The <a href="https://arxiv.org/html/2512.24880v2#S4">mHC paper</a> explains the constraint; <a href="https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash-DSpark/blob/62af8fffb2f7030cac4de2f0169f5b8d1101b646/inference/model.py#L851-L935">native DeepSeek code</a> shows averaging and fresh draft-stream expansion.</p>
-    <p>Ask the agent about any step that still feels unclear. The point is to follow the state changes, not memorize the terminology.</p>
-    <p><a href="../guides/drafter-config.html">Continue to the configuration reference</a> · <a href="../RESOURCES.md">Sources</a></p>
+    <p>mHC terminology and structure: <a href="https://arxiv.org/html/2512.24880v2#S4.SS1">the mHC paper</a>, <a href="https://github.com/huggingface/transformers/blob/50e35cc0ca18ec19b80653690de553e6decf74f5/src/transformers/models/glm5_next/modeling_glm5_next.py#L218-L336">GLM mappings</a>, <a href="https://github.com/huggingface/transformers/blob/50e35cc0ca18ec19b80653690de553e6decf74f5/src/transformers/models/glm5_next/modeling_glm5_next.py#L1313-L1347">the attention sublayer</a>, and <a href="https://github.com/huggingface/transformers/blob/50e35cc0ca18ec19b80653690de553e6decf74f5/src/transformers/models/glm5_next/modeling_glm5_next.py#L1494-L1510">initial residual streams</a>.</p>
+    <p>Attention terminology: <a href="https://arxiv.org/html/1706.03762v7#S3.SS2">the Transformer paper</a> and <a href="https://docs.pytorch.org/docs/2.14/generated/torch.nn.functional.scaled_dot_product_attention.html">PyTorch attention documentation</a>. Definitions: <a href="https://docs.pytorch.org/docs/2.14/generated/torch.nn.Embedding.html">token embeddings</a> and <a href="https://docs.pytorch.org/docs/2.14/generated/torch.nn.RMSNorm.html">RMSNorm</a>.</p>
   </footer>
 </main>
+<script>
+  const video = document.getElementById("mhc-video");
+  const status = document.getElementById("video-status");
+  let chapterEnd = Infinity;
+
+  function playFrom(start, end) {
+    chapterEnd = end;
+    video.currentTime = start;
+    status.textContent = "";
+    video.play().catch(() => {
+      status.textContent = "Playback did not start. Use the video controls or read the example below.";
+    });
+  }
+
+  document.getElementById("chapter-controls").hidden = false;
+  document.querySelectorAll("button[data-start]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const start = Number(button.dataset.start);
+      playFrom(start, start + 40);
+    });
+  });
+  document.getElementById("play-all").addEventListener("click", () => playFrom(0, Infinity));
+  document.getElementById("playback-speed").addEventListener("change", (event) => {
+    video.playbackRate = Number(event.target.value);
+  });
+  video.addEventListener("timeupdate", () => {
+    if (video.currentTime >= chapterEnd - 0.08) {
+      const lastFrame = chapterEnd - 0.08;
+      chapterEnd = Infinity;
+      video.pause();
+      video.currentTime = lastFrame;
+      status.textContent = "Step complete. Choose the next step, or use Play to continue.";
+    }
+  });
+  video.addEventListener("error", () => {
+    status.textContent = "The video did not load. Read the numerical example below.";
+  });
+</script>
 </body>
 </html>
