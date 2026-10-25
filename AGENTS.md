@@ -3,6 +3,15 @@
 Target exactly `zai-org/GLM-5.3-Flash` (`glm5_next`). Source revisions and
 reading paths live in `UPSTREAMS.toml`.
 
+## Required terminology
+
+Use exactly one term per concept across code, documentation, and every session.
+Use the canonical names and meanings in `CONTEXT.md`.
+If an important, recurring concept is missing, add its name and a concise
+definition to `CONTEXT.md` before using it.
+
+## Working rules
+
 Before planning work, read `README.md` for the project goal and current milestone.
 
 - Before changing target features, prompt formatting, logits, or cache behavior,
