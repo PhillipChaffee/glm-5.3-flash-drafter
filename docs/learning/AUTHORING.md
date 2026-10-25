@@ -50,10 +50,21 @@ accounts for every numerical quantity needed along the way.
 
 ## 3. Fix the terminology, then write plain English
 
-Use the [resources](RESOURCES.md) to find existing project sources.
-Choose accepted terms using primary papers, official documentation, and the
-relevant implementation. Align them with existing project terminology.
-Record the chosen names in a glossary and use one term for each concept.
+Read the [root glossary](../../CONTEXT.md) before writing a lesson or guide.
+It defines the project's shared technical vocabulary for lessons, guides, and
+code examples. Follow the [domain documentation rules](../agents/domain.md)
+when changing it. Use one term for each concept.
+
+Use this process for shared terms:
+
+1. Find each concept in `CONTEXT.md`. Reuse its established name and meaning.
+2. For a missing shared concept, confirm its meaning in primary sources.
+   Use the [resources](RESOURCES.md) as a starting point.
+   Add a concise definition and source link to `CONTEXT.md` before using the term.
+3. If existing definitions conflict, resolve the intended meaning before writing
+   the explanation. Use explicit qualifiers for different concepts.
+4. When a shared name or meaning changes, find affected first-party uses.
+   Update their explanations, captions, and named code outputs in the same change.
 
 Apply the same names to all learner-facing material:
 
@@ -63,9 +74,12 @@ Apply the same names to all learner-facing material:
 - Runnable examples and their named outputs.
 
 Define each unfamiliar term when it first appears. Use ordinary language to
-explain it, while preserving the technical name. Distinguish related concepts
-with explicit qualifiers, such as attention scores and attention weights.
+explain it, while preserving the shared name and meaning. Different lessons can
+use different examples or analogies. Link local glossary summaries to `CONTEXT.md`.
+Distinguish related concepts with explicit qualifiers, such as attention scores
+and attention weights.
 Define local mathematical symbols once and keep their meanings stable.
+Keep derivations, toy values, and example assumptions with their lesson or guide.
 
 Use `/simple-english` in Plain mode for prose and captions. Preserve the glossary
 terms while simplifying the surrounding sentences:
@@ -80,9 +94,10 @@ terms while simplifying the surrounding sentences:
 During a prose-only edit, preserve code, commands, paths, quoted text, numbers,
 and factual meaning. Change them only when the task requires it.
 
-Complete this step when the same concept keeps the same name across the lesson,
-animation, and runnable example. Plain language must clarify the terms rather
-than replace them with informal alternatives.
+Complete this step when shared concepts have entries in `CONTEXT.md`.
+Names and meanings must match across affected lessons, guides, animations, and
+runnable examples. Plain language must clarify the terms rather than replace
+them with informal alternatives.
 
 ## 4. Explain why before showing how
 
@@ -172,7 +187,8 @@ the same computation and their navigation matches the actual media.
 Review the artifact that the learner receives:
 
 - Run the numerical checks and relevant repository checks.
-- Compare the glossary names with the prose, captions, and code labels.
+- Compare names and definitions against `CONTEXT.md` across prose, captions, and
+  named code outputs.
 - Inspect actual rendered frames, including intermediate calculations and transitions.
 - Inspect moving numbers for overlap, distortion, or lost identity.
 - Test chapter pauses, playback controls, and keyboard behavior.
@@ -199,6 +215,9 @@ session can target them without rebuilding approved work.
 
 ## Document roles and layout
 
+The repository-level [glossary](../../CONTEXT.md) owns shared terms across lessons
+and guides.
+
 The learning root holds shared context:
 
 - `MISSION.md`: Goals and constraints for the whole learning area.
@@ -222,6 +241,7 @@ Both lessons and guides can use these directories.
 For new material, use one directory per lesson or guide:
 
 ```text
+CONTEXT.md
 docs/learning/
   MISSION.md
   RESOURCES.md
