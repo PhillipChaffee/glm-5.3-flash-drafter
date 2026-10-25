@@ -18,6 +18,8 @@ whether custom training is justified.
 - [mHC walkthrough](docs/learning/lessons/0001-follow-one-token-through-mhc.html)
   and [configuration reference](docs/learning/guides/drafter-config.html):
   HTML learning material to open locally.
+- [Lesson authoring rules](docs/learning/AUTHORING.md): reusable guidance for
+  examples, terminology, explanations, and animations.
 - [Source manifest](UPSTREAMS.toml): exact upstream revisions and reading paths.
 - [Setup research](docs/research/repository-setup.md): rationale and source links.
 - [Prior-work salvage assessment](docs/research/glm5-salvage-assessment.md):

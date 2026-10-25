@@ -18,6 +18,8 @@ Before planning work, read `README.md` for the project goal and current mileston
   The bootstrap lockfile contains development tools; the GPU environment remains
   a separate, unvalidated integration decision.
 - Work in a Git worktree. If delegating, use `openai/gpt-6.1-sol`.
+- Lessons: read `docs/learning/AUTHORING.md` before creating, revising, or
+  reviewing lesson prose, numerical examples, or animations.
 
 ## Agent skills
 
