@@ -2,11 +2,15 @@
 
 Use these rules for lesson prose, numerical examples, and animations.
 They record the requirements and lessons learned while building the mHC
-walkthrough. Read the latest [teaching notes](NOTES.md) before revising an
-existing lesson so that the user's current feedback guides the work.
+walkthrough. Read the affected lesson or guide's notes before revising it.
+Use the user's latest feedback to choose the next change.
+
+For new material, use the [document roles and layout](#document-roles-and-layout)
+to choose where its files belong.
 
 ## 1. Define the purpose and endpoint
 
+Read the [mission](MISSION.md) for the learning area's goals and constraints.
 State what the learner will understand and why that knowledge matters.
 Introduce the concrete input and the intended result before explaining the
 operations between them. Connect the worked example to the larger task it serves.
@@ -46,6 +50,7 @@ accounts for every numerical quantity needed along the way.
 
 ## 3. Fix the terminology, then write plain English
 
+Use the [resources](RESOURCES.md) to find existing project sources.
 Choose accepted terms using primary papers, official documentation, and the
 relevant implementation. Align them with existing project terminology.
 Record the chosen names in a glossary and use one term for each concept.
@@ -191,6 +196,68 @@ code cleanup.
 Complete this step when the relevant checks pass and the rendered artifact has
 been inspected. Record remaining learning gaps in the repository so the next
 session can target them without rebuilding approved work.
+
+## Document roles and layout
+
+The learning root holds shared context:
+
+- `MISSION.md`: Goals and constraints for the whole learning area.
+- `RESOURCES.md`: A source index that lessons and guides can reuse.
+- `AUTHORING.md`: Rules for writing, explaining, organizing, and verifying material.
+
+These documents can focus on this project while serving more than one lesson.
+Keep feedback about a particular lesson in that lesson's notes.
+
+A lesson teaches understanding through an ordered progression and a worked
+example. A guide answers a specific question or helps complete a task.
+Readers can open a guide at the needed section without following a full lesson.
+Guides reuse the terminology, evidence, readability, and verification rules.
+Give each worked explanation in a guide its own coherent example.
+
+`animations/` contains editable scene code and render instructions.
+`assets/` contains files the page displays or loads, such as videos, images,
+and stylesheets. Rendered animation output belongs in `assets/`.
+Both lessons and guides can use these directories.
+
+For new material, use one directory per lesson or guide:
+
+```text
+docs/learning/
+  MISSION.md
+  RESOURCES.md
+  AUTHORING.md
+  assets/
+    lesson.css
+  lessons/
+    0001-topic/
+      index.html
+      NOTES.md
+      example.py
+      animations/
+        scene.py
+        README.md
+      assets/
+        walkthrough.mp4
+        poster.jpg
+  guides/
+    topic/
+      index.html
+```
+
+Add notes, runnable examples, assets, and animation sources only when needed.
+A guide can use the same optional files and directories shown for a lesson.
+Keep its examples, explanations, and media together under the topic directory.
+Link to primary sources beside the claims they support, even when the shared
+resource index lists those sources.
+
+Keep files used by several lessons or guides in shared directories at the learning root.
+The existing `assets/lesson.css` serves both the lesson and the configuration
+guide. A video or scene used by only one lesson belongs inside that lesson.
+Extract shared animation code when several lessons or guides need it.
+
+For existing material, adopt this layout in a separate file-move change.
+Update incoming links, imports, render commands, and path-based tests together.
+Keep file moves separate from changes to the lesson's behavior or content.
 
 ## Reference artifacts
 

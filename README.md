@@ -15,11 +15,13 @@ whether custom training is justified.
   integration boundaries.
 - [Approved first drafter baseline](docs/research/first-drafter-recommendation.md):
   selected model, feature, and loss contracts, with their rationale.
+- [Learning mission](docs/learning/MISSION.md) and
+  [resources](docs/learning/RESOURCES.md): shared learning goals and source material.
 - [mHC walkthrough](docs/learning/lessons/0001-follow-one-token-through-mhc.html)
   and [configuration reference](docs/learning/guides/drafter-config.html):
   HTML learning material to open locally.
 - [Lesson authoring rules](docs/learning/AUTHORING.md): reusable guidance for
-  examples, terminology, explanations, and animations.
+  examples, terminology, explanations, animations, and file layout.
 - [Source manifest](UPSTREAMS.toml): exact upstream revisions and reading paths.
 - [Setup research](docs/research/repository-setup.md): rationale and source links.
 - [Prior-work salvage assessment](docs/research/glm5-salvage-assessment.md):
