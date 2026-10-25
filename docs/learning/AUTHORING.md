@@ -176,8 +176,14 @@ Keep the written and animated versions synchronized:
 - Keep the written explanation usable without video playback or JavaScript.
 
 Provide pause, seeking, speed controls, and keyboard access for video lessons.
-Keep sources and render instructions with the lesson. Follow the requested
-animation tool and version.
+Keep sources and render instructions with the lesson.
+Use [Manim Community](https://github.com/ManimCommunity/manim) for new animations
+and future scene revisions. Follow its [official documentation](https://docs.manim.community/en/stable/)
+and record the tested version with the render command.
+
+Before revising a ManimGL scene, convert it to Manim Community.
+Compare its numbers, timing, and rendered presentation with the approved version.
+Keep existing render instructions accurate for the current scene source.
 
 Complete this step when the text, runnable example, and rendered assets describe
 the same computation and their navigation matches the actual media.

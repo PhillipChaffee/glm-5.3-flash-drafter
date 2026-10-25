@@ -71,6 +71,8 @@ convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
 "glm_flash_drafter/__main__.py" = ["T201"] # The CLI emits its verification result to stdout.
+"docs/learning/animations/*.py" = ["INP001"] # Standalone lesson scripts, not an installed package.
+"docs/learning/animations/mhc_toy.py" = ["T201"] # Prints the worked example's numeric trace.
 # Tests earn a narrower bar; the shipped-code rules above stay in force for
 # everything else.
 "tests/**" = [
@@ -149,6 +151,7 @@ fail_under = 95
 
 [tool.deptry]
 extend_exclude = ["reference", "upstream"] # Upstreams have separate dependency environments.
+known_first_party = ["mhc_toy"] # Sibling import in the standalone lesson renderer.
 # deptry compares the imports the code makes against the dependencies this
 # file declares ([project.dependencies]). Every default stays, so all four
 # rules fire: DEP001 (imported but not declared), DEP002 (declared but never
@@ -156,6 +159,9 @@ extend_exclude = ["reference", "upstream"] # Upstreams have separate dependency 
 # dependency imported in shipped code). The default exclude list already
 # covers tests, .venv, and .git. No entry here means no override to reason
 # about; an exception goes in [tool.deptry.per_rule_ignores] with its reason.
+
+[tool.deptry.per_rule_ignores]
+DEP001 = ["manimlib"] # Optional documentation renderer, pinned in docs/learning/animations/README.md.
 
 [tool.vulture]
 # vulture reports names defined but never referenced. Paths are passed on

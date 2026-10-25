@@ -38,10 +38,38 @@ details { margin: 1rem 0; padding: 0.8rem 1rem; border: 1px solid #c5d3dc; borde
 summary { cursor: pointer; font-weight: 650; }
 :focus-visible { outline: 3px solid #147d86; outline-offset: 4px; }
 footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #c5d3dc; font-size: 0.9rem; }
+.mhc-lesson main { max-width: 1080px; }
+.mhc-lesson header { max-width: 850px; }
+.mhc-lesson section { scroll-margin-top: 1rem; }
+.mhc-terms dt { margin-top: 0.8rem; font-weight: 650; }
+.mhc-terms dd { margin-left: 0; color: #425466; }
+.mhc-follow { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; padding: 0.6rem; margin: 1.5rem 0; background: #fafaf8; border-block: 1px solid #c5d3dc; font-size: 0.85rem; }
+.mhc-token { padding: 0.15rem 0.5rem; border: 1px solid #aabed0; border-radius: 0.2rem; background: white; }
+.mhc-focus { border: 2px solid #936019; background: #fff0cd; color: #533600; font-weight: 700; }
+.mhc-lesson video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; background: #101b2a; border-radius: 0.5rem; }
+.mhc-controls { margin-top: 0.8rem; }
+.mhc-chapters, .mhc-playback { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: 0.65rem; }
+.mhc-controls button, .mhc-controls select { font: inherit; font-size: 0.85rem; color: #173a55; background: #edf4fa; border: 1px solid #aabed0; border-radius: 0.3rem; padding: 0.55rem 0.7rem; min-height: 44px; cursor: pointer; }
+.mhc-controls button:hover { background: #dbeaf8; }
+.mhc-playback label { margin-left: 0.5rem; font-size: 0.85rem; }
+.mhc-lesson #video-status:empty { display: none; }
+.mhc-equation { background: #101b2a; color: #edf3fc; font-size: 0.95rem; }
+.mhc-lesson figure { margin: 0.5rem 0; min-width: 0; }
+.mhc-lesson figcaption { font-size: 0.9rem; color: #425466; }
+.mhc-lesson .matrix { font-size: 0.94rem; }
+.mhc-lesson .matrix th, .mhc-lesson .matrix td { padding: 0.6rem 0.45rem; }
+@media (max-width: 760px) {
+  .mhc-lesson .matrix { font-size: 0.78rem; }
+  .mhc-lesson .matrix th, .mhc-lesson .matrix td { padding: 0.5rem 0.3rem; }
+  .mhc-lesson .matrix th { overflow-wrap: anywhere; }
+  .mhc-lesson main { padding-inline: 0.85rem; }
+}
 @media print {
   :root { font-size: 11pt; background: white; }
   main { max-width: none; padding: 0; }
   nav { display: none; }
+  .mhc-lesson video, .mhc-controls, #video-help, #video-status { display: none; }
+  .mhc-equation { background: #eef2f5; color: #172b3a; }
   h2, h3 { break-after: avoid; }
   pre, table, .streams, details { break-inside: avoid; }
   pre { white-space: pre-wrap; }
